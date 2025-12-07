@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter -->
+        <version>4.0.0</version>
+        <!-- lookup parent from repository -->
+        <relativePath/>
+    </parent>
+
+    <groupId>com.iohao.cookbook</groupId>
+    <artifactId>ionet-spring-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <ionet.version>25.1</ionet.version>
+
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.iohao.net</groupId>
+            <artifactId>run-one</artifactId>
+            <version>${ionet.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.iohao.net</groupId>
+            <artifactId>extension-client</artifactId>
+            <version>${ionet.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.iohao.net</groupId>
+            <artifactId>extension-spring</artifactId>
+            <version>${ionet.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+    </dependencies>
+</project>

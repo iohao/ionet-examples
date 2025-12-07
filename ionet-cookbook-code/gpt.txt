@@ -1,0 +1,773 @@
+你是 aeron 开源项目的专家，我有问题要问你。我的环境是 MACOS，开发工具使用的是 IDEA，项目使用了 maven 。java version "25" 2025-09-16 LTS，pom.xml 配置如下
+···xml
+<dependency>
+    <groupId>io.aeron</groupId>
+    <artifactId>aeron-all</artifactId>
+    <version>1.48.6</version>
+</dependency>
+
+<dependency>
+    <groupId>uk.co.real-logic</groupId>
+    <artifactId>sbe-tool</artifactId>
+    <version>1.35.6</version>
+</dependency>
+```
+
+你回答我时需要用简体中文。
+
+帮我看下我下面的代码，关于 Aeron 的消息发布，test 是测试代码，count = 10。
+下面的 communication.call(requestMessage); 会把 requestMessage 放入到 DefaultPublisher.publishMessage 方法中。
+内部使用的是 DefaultFutureManager 来创建 CompletableFuture，你看下有优化的空间吗。
+
+测试方法耗时大约是 millis:23 ，现在我主要相关优化单次 RTT 的时间。
+现在测出从 EnterprisePublisher publication.offer(buffer, 0, limit); 这里发出消息到 RequestMessageOnFragment 接收处理 ，用了大概 800 微妙，
+不是说 aeron 是纳秒级的吗，为什么还用了 800 微妙，打印数据如下
+```text
+30:22.992 [Publisher] [] INFO  extracted(EnterprisePublisher.java:106) publish userId:1 - 248
+30:22.993 [Net] [] INFO  process(RequestMessageOnFragment.java:69) userId:1 - 1012
+30:22.995 [Publisher] [] INFO  extracted(EnterprisePublisher.java:106) publish userId:2 - 170
+30:22.996 [Net] [] INFO  process(RequestMessageOnFragment.java:69) userId:2 - 1061
+```
+
+spring mvc test 方法的打印如下
+```text
+millis:25
+avgMicrosTime:363
+
+title: call-FutureTimes
+size: 10
+sumTime: 282,520
+avgMicros: 28
+avgMillis: 0
+-----------------------
+
+title: call-requestSbeTimes
+size: 10
+sumTime: 359,419
+avgMicros: 35
+avgMillis: 0
+-----------------------
+
+
+title: requestOnFragmentTimes
+size: 10
+sumTime: 1,638,088
+avgMicros: 163
+avgMillis: 0
+-----------------------
+
+title: handleTimes
+size: 10
+sumTime: 1,137,899
+avgMicros: 113
+avgMillis: 0
+-----------------------
+
+title: responseSbeTimes
+size: 10
+sumTime: 240,395
+avgMicros: 24
+avgMillis: 0
+-----------------------
+```
+
+
+@RestController
+@RequestMapping("gm")
+public final class GameManagerController {
+    @GetMapping("/test/{count}")
+    public String test(@PathVariable int count) throws InterruptedException {
+
+        DevKit.reset();
+
+        var cmd = GameManagerCmd.of(GameManagerCmd.test);
+        var communication = CommunicationKit.getCommunication();
+        long nanoTime = System.nanoTime();
+
+        for (int i = 1; i <= count; i++) {
+            var requestMessage = communication.ofRequestMessage(cmd, i);
+            requestMessage.bindingUserId(i);
+            // ... set message properties ...
+            var response = communication.call(requestMessage);
+        }
+
+        var millis = TimeKit.elapsedMillis(nanoTime);
+
+        TimeUnit.MILLISECONDS.sleep(100);
+
+        String ofFutureTimes = DevKit.toString("call-FutureTimes", DevKit.ofFutureTimes);
+        String requestSbeTimes = DevKit.toString("call-requestSbeTimes", DevKit.requestSbeTimes);
+
+        String requestOnFragmentTimes = DevKit.toString("requestOnFragmentTimes", DevKit.requestOnFragmentTimes);
+        String handleTimes = DevKit.toString("handleTimes", DevKit.handleTimes);
+        String responseSbeTimes = DevKit.toString("responseSbeTimes", DevKit.responseSbeTimes);
+
+        return """
+                millis:%,d
+                avgMicrosTime:%,d
+
+                %s
+                %s
+
+                %s
+                %s
+                %s
+                """.formatted(millis
+                , DevKit.avgMicrosTime.sum()
+
+                , ofFutureTimes
+                , requestSbeTimes
+
+                , requestOnFragmentTimes
+                , handleTimes
+                , responseSbeTimes
+        ).replaceAll("\n", "<br/>");
+    }
+}
+
+
+DefaultCommunicationAggregation 会被多个线程调用。
+@FieldDefaults(level = AccessLevel.PROTECTED)
+public class DefaultCommunicationAggregation implements CommunicationAggregation, NetServerSettingAware {
+    ...
+    @Override
+    public Response call(RequestMessage message) {
+        CompletableFuture<Response> future = null;
+
+        try {
+            long nanoTime = System.nanoTime();
+            message.setNanoTime(nanoTime);
+            future = callFuture(message);
+            DevKit.ofFutureTimes(nanoTime);
+            var response = future.get(futureTimeoutMillis, TimeUnit.MILLISECONDS);
+
+            DevKit.ofFutureGetTimes(nanoTime);
+
+            return response;
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            log.warn("call timeout: {}", e.getMessage());
+
+            var response = new ResponseMessage();
+            response.setError(ActionErrorEnum.internalCommunicationError);
+            this.futureManager.remove(message.getFutureId());
+            return response;
+        }
+    }
+
+    @Override
+    public CompletableFuture<Response> callFuture(RequestMessage message) {
+        var server = this.findServer.getServer(message);
+        if (server == null) {
+            return ofErrorFuture(message.getOutputError());
+        }
+
+        if (message.getHopCount() == 0) {
+            message.setHopCount(2);
+        }
+
+        var futureId = this.futureManager.nextFutureId();
+        message.setFutureId(futureId);
+
+        if (message.getSourceServerId() == 0) {
+            message.setSourceServerId(server.id());
+        }
+
+        publishMessage(server.pubName(), message);
+        return this.futureManager.ofFuture(futureId);
+    }
+
+}
+
+ShardedFutureManager 会被多个线程调用，shards = 32。
+
+@Slf4j
+public class ShardedFutureManager implements FutureManager {
+    private static final class FutureHolder extends CompletableFuture<Object> {
+        final long createTimeNanos = TimeCacheKit.currentNanoTime();
+    }
+
+    final int shardLength;
+    final ConcurrentHashMap<Long, FutureHolder>[] shardMaps;
+    final AtomicLong idGenerator = new AtomicLong(1);
+    final ScheduledExecutorService cleaner;
+    final long timeoutNanos;
+    int shardIndex = 0;
+
+    @SuppressWarnings("unchecked")
+    public ShardedFutureManager(int shards, final long timeoutMillis) {
+        if (Integer.bitCount(shards) != 1) {
+            throw new IllegalArgumentException("shards must be power of two for fast mod");
+        }
+
+        this.shardLength = shards - 1;
+        this.timeoutNanos = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        this.shardMaps = new ConcurrentHashMap[shards];
+        for (int i = 0; i < shards; i++) {
+            this.shardMaps[i] = new ConcurrentHashMap<>();
+        }
+
+        this.cleaner = ExecutorKit.newSingleScheduled("FutureCleaner");
+        this.cleaner.scheduleAtFixedRate(this::cleanTimeouts, timeoutMillis, 100, TimeUnit.MILLISECONDS);
+    }
+
+    private ConcurrentHashMap<Long, FutureHolder> shardFor(long futureId) {
+        return shardMaps[(int) (futureId & shardLength)];
+    }
+
+    @Override
+    public long nextFutureId() {
+        return idGenerator.getAndIncrement();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> CompletableFuture<T> ofFuture(long futureId) {
+        var holder = new FutureHolder();
+
+        shardFor(futureId).put(futureId, holder);
+        return (CompletableFuture<T>) holder;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> CompletableFuture<T> remove(long futureId) {
+        var holder = shardFor(futureId).remove(futureId);
+        if (holder == null) {
+            return null;
+        }
+
+        return (CompletableFuture<T>) holder;
+    }
+
+
+    private void cleanTimeouts() {
+        final long now = System.nanoTime();
+        ConcurrentHashMap<Long, FutureHolder> shard = shardMaps[shardIndex];
+        shardIndex = (shardIndex + 1) & shardLength;
+
+        for (Iterator<Map.Entry<Long, FutureHolder>> it = shard.entrySet().iterator(); it.hasNext(); ) {
+            var e = it.next();
+            var h = e.getValue();
+            if (h == null) continue;
+
+            if (h.isDone()) {
+                it.remove();
+                continue;
+            }
+
+            if (now - h.createTimeNanos > timeoutNanos) {
+                if (h.completeExceptionally(new TimeoutException("future timeout"))) {
+                    it.remove();
+                }
+            }
+        }
+    }
+}
+
+public interface FutureManager {
+    long nextFutureId();
+
+    <T> CompletableFuture<T> ofFuture(long futureId);
+
+    <T> CompletableFuture<T> remove(long futureId);
+
+    default void complete(FutureMessage message){
+        long futureId = message.getFutureId();
+        var future = remove(futureId);
+        if (future != null) {
+            future.complete(message);
+        }
+    }
+}
+
+
+DefaultPublisher 会被多个线程调用。
+
+@Slf4j
+@SuppressWarnings("all")
+@FieldDefaults(level = AccessLevel.PROTECTED)
+public class DefaultPublisher implements Publisher {
+    final Map<String, Publication> publicationMap = CollKit.ofConcurrentHashMap();
+    final Map<String, Queue<Object>> messageQueueMap = CollKit.ofConcurrentHashMap();
+    volatile boolean running = true;
+    ExecutorService executorService;
+    AtomicBoolean startup = new AtomicBoolean(false);
+    PublisherRunnable publisherRunnable;
+
+
+    @Override
+    public void addPublication(String name, Publication publication) {
+        publicationMap.put(name, publication);
+        messageQueueMap.putIfAbsent(name, new ManyToOneConcurrentArrayQueue<>(2048));
+    }
+
+    @Override
+    public void publishMessage(String name, Object message) {
+        var queue = messageQueueMap.get(name);
+        if (queue != null) {
+            queue.offer(message);
+        }
+    }
+
+    @Override
+    public void startup() {
+        if (startup.get()) {
+            return;
+        }
+
+        if (startup.compareAndSet(false, true)) {
+            var threadFactory = ExecutorKit.createSigleThreadFactory("Publisher");
+            executorService = ExecutorKit.newSingleThreadExecutor(threadFactory);
+            executorService.submit(this.getPublisherRunnable());
+        }
+    }
+
+    protected void close() {
+        publicationMap.values().forEach(Publication::close);
+    }
+
+    @Override
+    public void shutdown() {
+        running = false;
+        if (executorService != null) {
+            executorService.shutdown();
+        }
+    }
+
+    @Override
+    public PublisherRunnable getPublisherRunnable() {
+
+        return publisherRunnable;
+    }
+}
+
+EnterprisePublisher 会被多个线程调用。
+
+@Slf4j
+public final class EnterprisePublisher extends DefaultPublisher {
+    @Override
+    public PublisherRunnable getPublisherRunnable() {
+        if (publisherRunnable == null) {
+            publisherRunnable = new EnterprisePublisherRunnable();
+        }
+
+        return publisherRunnable;
+    }
+
+    private class EnterprisePublisherRunnable implements PublisherRunnable {
+        private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[CoreGlobalConfig.publisherBufferSize]);
+        private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+        final IdleStrategy idleStrategy = new BackoffIdleStrategy(
+                1, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
+        @Override
+        public void run() {
+            try {
+                while (running) {
+                    extracted();
+                }
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+            } finally {
+                close();
+            }
+        }
+
+        private void extracted() {
+            boolean messagesPublished = false;
+
+            for (String key : messageQueueMap.keySet()) {
+                var queue = messageQueueMap.get(key);
+                var publication = publicationMap.get(key);
+
+                if (queue == null || publication == null) {
+                    continue;
+                }
+
+                Object message;
+                while ((message = queue.poll()) != null) {
+                    messagesPublished = true;
+                    long nanoTime = System.nanoTime();
+
+                    MessageSbe<Object> encoder = SbeMessageManager.getMessageEncoder(message.getClass());
+                    if (encoder == null) {
+                        log.error("MessageSBEEncoder Error: {} not exist!", message.getClass().getSimpleName());
+                        continue;
+                    }
+
+                    encoder.encoder(message, headerEncoder, buffer);
+                    int limit = encoder.limit();
+
+                    // Aeron.offer() 是非阻塞的，如果 Publication back-pressures (比如 L_NOT_CONNECTED, BACK_PRESSURED)，
+                    // 最佳实践是将其放回队列头部或放入一个临时重试队列。
+                    // 但对于简单的实现，暂时只关注成功发送和性能提升。
+
+                    if (message instanceof RequestMessage requestMessage) {
+                        DevKit.requestSbeTimes(nanoTime);
+                        log.info("publish userId:{} - {}", requestMessage.getUserId(),
+                                TimeKit.elapsedMicros(requestMessage.getNanoTime())
+                        );
+                    } else {
+                        DevKit.responseSbeTimes(nanoTime);
+                    }
+
+                    long result = publication.offer(buffer, 0, limit);
+
+
+                    if (result < 0) {
+                        // **重要：处理背压 (Back-Pressure) 或错误**
+                        // 在生产环境中，你需要考虑如何处理 L_NOT_CONNECTED, BACK_PRESSURED 等情况。
+                        // 简单的做法是 log 错误，然后 continue 或 break 内部循环。
+                        // 更优的做法是把消息放回队列头部 (queue.offerFirst(message) 如果使用 Deque)
+                        // 或者把它移动到一个特殊的重试队列。
+                        // 为了简单起见，我们假设失败就丢弃或在日志中记录。
+                        if (result == Publication.BACK_PRESSURED) {
+                            // 如果背压，可以将 message 放回队列，然后 break 内部循环，
+                            // 让外部循环继续轮询其他 publication，下一轮再重试当前 publication
+                            // 这里为了示例，先简化处理。
+                            log.warn("Publication back-pressured for key: {}", key);
+                            // 遇到背压，先停止处理当前队列，让出 CPU 给其他 Publication
+                            break;
+                        } else if (result == Publication.NOT_CONNECTED) {
+                            log.error("Publication not connected for key: {}", key);
+                        } else {
+                            log.error("Publication offer failed with result: {} for key: {}", result, key);
+                        }
+                    }
+                }
+            }
+
+            if (!messagesPublished) {
+                idleStrategy.idle();
+            } else {
+                idleStrategy.reset();
+            }
+        }
+    }
+}
+
+
+
+@UtilityClass
+public final class TimeKit {
+    public long elapsedMillis(long nanoTime) {
+        return (System.nanoTime() - nanoTime) / 1_000_000;
+    }
+
+    public long elapsedMicros(long nanoTime) {
+        return (System.nanoTime() - nanoTime) / 1_000;
+    }
+}
+
+@UtilityClass
+public final class DevKit {
+    public AtomicBoolean devEnterprise = new AtomicBoolean();
+
+    public BlockingQueue<Long> requestOnFragmentTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> handleTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> callTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> ofFutureTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> ofFutureGetTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> requestSbeTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> responseSbeTimes = new LinkedBlockingQueue<>();
+    public LongAdder avgMicrosTime = new LongAdder();
+
+    public void requestSbeTimes(long nanoTime) {
+        requestSbeTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void responseSbeTimes(long nanoTime) {
+        responseSbeTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void ofFutureTimes(long nanoTime) {
+        ofFutureTimes.offer(System.nanoTime() - nanoTime);
+    }
+    public void ofFutureGetTimes(long nanoTime) {
+        ofFutureGetTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void requestOnFragmentTimes(long nanoTime) {
+        requestOnFragmentTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void handleTimes(long nanoTime) {
+        handleTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void callTimes(long nanoTime) {
+        callTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void reset() {
+        ofFutureTimes.clear();
+        requestSbeTimes.clear();
+        ofFutureGetTimes.clear();
+
+        requestOnFragmentTimes.clear();
+        handleTimes.clear();
+        responseSbeTimes.clear();
+
+
+        callTimes.clear();
+        avgMicrosTime.reset();
+    }
+
+    public String toString(String title, BlockingQueue<Long> times) {
+        return new DataPanel(title, times).toString();
+    }
+
+    private static class DataPanel {
+        final String title;
+        final BlockingQueue<Long> times;
+        long sumTime;
+
+        DataPanel(String title, BlockingQueue<Long> times) {
+            this.title = title;
+            this.times = times;
+        }
+
+        @Override
+        public String toString() {
+
+            int size = times.size();
+
+            Long value;
+            while ((value = times.poll()) != null) {
+                sumTime += value;
+            }
+
+            avgMicrosTime.add(sumTime / size / 1_000);
+
+            return """
+                    title: %s
+                    size: %s
+                    sumTime: %,d
+                    avgMicros: %,d
+                    avgMillis: %,d
+                    -----------------------
+                    """.formatted(title
+                    , size
+                    , sumTime
+                    , sumTime / size / 1_000
+                    , sumTime / size / 1_000_000
+            );
+        }
+    }
+}
+
+public class RequestMessageOnFragment extends AbstractRequestOnFragment {
+    protected final RequestMessageDecoder decoder = new RequestMessageDecoder();
+
+    @Override
+    public void process(DirectBuffer buffer, int offset, int actingBlockLength, int actingVersion, Header header) {
+        long nanoTime = System.nanoTime();
+        decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+
+        var message = new RequestMessage();
+        SbeKit.decoderMessageCommon(message, decoder.common());
+        SbeKit.decoderUserIdentity(message, decoder.userIdentity());
+
+        message.setHopCount(decoder.hopCount());
+
+        extracted(message);
+
+        var dataLength = decoder.dataLength();
+        var dataBytes = ByteKit.ofBytes(dataLength);
+        decoder.getData(dataBytes, 0, dataLength);
+        message.setData(dataBytes);
+
+        var attachmentLength = decoder.attachmentLength();
+        var attachmentBytes = ByteKit.ofBytes(attachmentLength);
+        decoder.getAttachment(attachmentBytes, 0, attachmentLength);
+        message.setAttachment(attachmentBytes);
+
+        commonProcess(message, CommunicationType.INTERNAL_CALL);
+
+        log.info("userId:{} - {}", message.getUserId(),
+                TimeKit.elapsedMicros(message.getNanoTime())
+        );
+
+        DevKit.requestOnFragmentTimes(nanoTime);
+    }
+
+    protected void extracted(RequestMessage message) {
+        decoder.bindingLogicServerIds();
+    }
+
+    @Override
+    public int getTemplateId() {
+        return RequestMessageDecoder.TEMPLATE_ID;
+    }
+}
+
+Aeron 和 MediaDriver 配置如下
+public class AeronLifecycleManager {
+    static final Logger log = LoggerFactory.getLogger(AeronLifecycleManager.class);
+
+    // 10 分钟 (600 秒) 的纳秒值
+    public static final long DEBUG_CLIENT_TIMEOUT_NS = 600_000_000_000L;
+    // 10 分钟 (600 秒) 的毫秒值，用于 aeron.driver.timeout
+    public static final long DEBUG_DRIVER_TIMEOUT_MS = 600_000L;
+    // 15 分钟 (900 秒) 的纳秒值
+    public static final long DEBUG_UNBLOCK_TIMEOUT_NS = 900_000_000_000L;
+    // 略大于 10 分钟的纳秒值
+    public static final long DEBUG_INTER_SERVICE_TIMEOUT_NS = DEBUG_CLIENT_TIMEOUT_NS + 1_000_000_000L;
+
+    static {
+        // 🚀 1. 延长客户端等待 Driver 出现的心跳超时 (单位: 毫秒)
+        System.setProperty("aeron.driver.timeout", String.valueOf(DEBUG_DRIVER_TIMEOUT_MS));
+
+        // 🚀 2. 延长客户端保活间隔 (单位: 纳秒)
+        System.setProperty("aeron.keepAliveIntervalNs", String.valueOf(DEBUG_CLIENT_TIMEOUT_NS));
+
+        // 🚀 3. 延长客户端集群服务超时，解决配置校验 (单位: 纳秒)
+        System.setProperty("aeron.interServiceTimeoutNs", String.valueOf(DEBUG_INTER_SERVICE_TIMEOUT_NS));
+    }
+
+    private MediaDriver mediaDriver;
+    private Aeron aeron;
+
+    public static String getAeronDirectoryName() {
+        return "%s-%s".formatted(CommonContext.getAeronDirectoryName(), "ionet");
+    }
+
+    public AeronLifecycleManager() {
+        initMediaDriver();
+        initAeron();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(this::destroy));
+    }
+
+    public Aeron getAeron() {
+        return aeron;
+    }
+
+    // MediaDriver Bean
+    private MediaDriver initMediaDriver() {
+
+        if (mediaDriver != null) {
+            return mediaDriver;
+        }
+
+        log.info("Starting Aeron Embedded Media Driver...");
+        var mediaDriverCtx = new MediaDriver.Context()
+                // 设置客户端心跳超时时间 (确保 Driver 知道 Client 10分钟后才断开)
+                .clientLivenessTimeoutNs(DEBUG_CLIENT_TIMEOUT_NS)
+                // 设置发布解除阻塞超时时间 (必须大于心跳超时)
+                .publicationUnblockTimeoutNs(DEBUG_UNBLOCK_TIMEOUT_NS)
+                // 确保使用独特的目录名并隔离，避免与其他 Media Driver 冲突
+                // Ensure a unique and isolated directory name is used to avoid conflicts with other Media Drivers
+                .aeronDirectoryName(getAeronDirectoryName())
+//                .sharedIdleStrategy(new SleepingMillisIdleStrategy(1))
+                .sharedIdleStrategy(new BusySpinIdleStrategy())
+                // 启动时清理旧目录，解决残留文件问题
+                // Clean up old directories on startup to resolve residual file issues
+                .dirDeleteOnStart(true)
+                // 关闭时清理目录
+                // Clean up directory on shutdown
+                .dirDeleteOnShutdown(true)
+                // 使用专用线程模式
+                // Use dedicated threading mode
+                .threadingMode(ThreadingMode.DEDICATED);
+
+        this.mediaDriver = MediaDriver.launchEmbedded(mediaDriverCtx);
+        log.info("Aeron Media Driver started at: {}", this.mediaDriver.aeronDirectoryName());
+
+        try {
+            // 启动后暂停，确保驱动程序完成内部初始化
+            // Pause after startup to ensure the driver completes its internal initialization
+            Thread.sleep(100);
+        } catch (InterruptedException ignore) {
+            Thread.currentThread().interrupt();
+        }
+
+        return mediaDriver;
+    }
+
+    // Aeron Client Bean
+    private void initAeron() {
+        log.info("Connecting Aeron Client...");
+        var aeronCtx = new Aeron.Context();
+        aeronCtx.driverTimeoutMs(DEBUG_DRIVER_TIMEOUT_MS);
+
+//        aeronCtx.idleStrategy(new SleepingMillisIdleStrategy(1));
+        aeronCtx.idleStrategy(new BusySpinIdleStrategy());
+
+        // 确保客户端连接到驱动程序使用的目录
+        // Ensure the client connects to the directory used by the driver
+        aeronCtx.aeronDirectoryName(getAeronDirectoryName());
+
+        var handler = new DefaultUnavailableImageHandler();
+        aeronCtx.unavailableImageHandler(handler);
+        aeronCtx.availableImageHandler(handler);
+
+        // 使用更健壮的连接方法，例如设置超时，或者简单连接
+        // Use a more robust connection method, such as setting a timeout, or a simple connect
+        this.aeron = Aeron.connect(aeronCtx);
+        log.info("Aeron Client connected.");
+    }
+
+    private void destroy() {
+        log.info("Shutting down Aeron client and Media Driver...");
+        if (aeron != null) {
+            try {
+                aeron.close();
+            } catch (Exception e) {
+                log.error("Error closing Aeron client: {}", e.getMessage());
+            }
+        }
+
+        if (mediaDriver != null) {
+            try {
+                mediaDriver.close();
+            } catch (Exception e) {
+                log.error("Error closing Media Driver: {}", e.getMessage());
+            }
+        }
+
+        log.info("Aeron components shut down successfully.");
+    }
+}
+
+我在 mvc test 方法中做了一些打印，平均只用了 40 微妙，打印如下
+```text
+millis:234
+avgMicrosTime:40
+
+title: call-FutureTimes
+size: 100
+sumTime: 314,807
+avgMicros: 3
+avgMillis: 0
+-----------------------
+
+title: call-requestSbeTimes
+size: 100
+sumTime: 372,004
+avgMicros: 3
+avgMillis: 0
+-----------------------
+
+
+title: requestOnFragmentTimes
+size: 100
+sumTime: 1,436,407
+avgMicros: 14
+avgMillis: 0
+-----------------------
+
+title: handleTimes
+size: 100
+sumTime: 1,709,916
+avgMicros: 17
+avgMillis: 0
+-----------------------
+
+title: responseSbeTimes
+size: 100
+sumTime: 363,084
+avgMicros: 3
+avgMillis: 0
+-----------------------
+```

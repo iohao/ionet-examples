@@ -1,0 +1,406 @@
+你是 aeron 开源项目的专家，我有问题要问你。我的环境是 MACOS，开发工具使用的是 IDEA，项目使用了 maven 。java version "25" 2025-09-16 LTS，pom.xml 配置如下
+···xml
+<dependency>
+    <groupId>io.aeron</groupId>
+    <artifactId>aeron-all</artifactId>
+    <version>1.48.6</version>
+</dependency>
+
+<dependency>
+    <groupId>uk.co.real-logic</groupId>
+    <artifactId>sbe-tool</artifactId>
+    <version>1.35.6</version>
+</dependency>
+```
+
+你回答我时需要用简体中文。
+
+
+我在 EnterprisePublisher 发送之前记录了时间 `requestMessage.setNanoTime(System.nanoTime());`,
+为什么在接收时用了 800 微妙， Aeron 不是纳秒级的吗。
+
+所有相关类
+```java
+@Slf4j
+public final class EnterprisePublisher extends DefaultPublisher {
+    @Override
+    public PublisherRunnable getPublisherRunnable() {
+        if (publisherRunnable == null) {
+            publisherRunnable = new EnterprisePublisherRunnable();
+        }
+
+        return publisherRunnable;
+    }
+
+    private class EnterprisePublisherRunnable implements PublisherRunnable {
+        //private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[CoreGlobalConfig.publisherBufferSize]);
+        private final UnsafeBuffer buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(CoreGlobalConfig.publisherBufferSize));
+        private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+        final IdleStrategy idleStrategy = new BackoffIdleStrategy(
+                1, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
+        @Override
+        public void run() {
+            try {
+                while (running) {
+                    extracted();
+                }
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
+            } finally {
+                close();
+            }
+        }
+
+        private void extracted() {
+            boolean messagesPublished = false;
+
+            for (String key : messageQueueMap.keySet()) {
+                var queue = messageQueueMap.get(key);
+                var publication = publicationMap.get(key);
+
+                if (queue == null || publication == null) {
+                    continue;
+                }
+
+                Object message;
+                while ((message = queue.poll()) != null) {
+                    messagesPublished = true;
+                    long nanoTime = System.nanoTime();
+
+                    MessageSbe<Object> encoder = SbeMessageManager.getMessageEncoder(message.getClass());
+                    if (encoder == null) {
+                        log.error("MessageSBEEncoder Error: {} not exist!", message.getClass().getSimpleName());
+                        continue;
+                    }
+
+                    encoder.encoder(message, headerEncoder, buffer);
+                    int limit = encoder.limit();
+
+                    if (message instanceof RequestMessage requestMessage) {
+                        DevKit.requestSbeTimes(nanoTime);
+                        if (DevKit.print) {
+                            log.info("publish userId:{} - {}", requestMessage.getUserId(),
+                                    TimeKit.elapsedMicros(requestMessage.getNanoTime())
+                            );
+                        }
+                        requestMessage.setNanoTime(System.nanoTime());
+                    } else {
+                        DevKit.responseSbeTimes(nanoTime);
+                    }
+
+                    long result = publication.offer(buffer, 0, limit);
+                }
+            }
+
+            if (!messagesPublished) {
+                idleStrategy.idle();
+            } else {
+                idleStrategy.reset();
+            }
+        }
+    }
+}
+
+@FieldDefaults(level = AccessLevel.PROTECTED)
+public class DefaultPublisher implements Publisher {
+    final Map<String, Publication> publicationMap = CollKit.ofConcurrentHashMap();
+    final Map<String, Queue<Object>> messageQueueMap = CollKit.ofConcurrentHashMap();
+    volatile boolean running = true;
+    ExecutorService executorService;
+    AtomicBoolean startup = new AtomicBoolean(false);
+    PublisherRunnable publisherRunnable;
+
+
+    @Override
+    public void addPublication(String name, Publication publication) {
+        publicationMap.put(name, publication);
+        messageQueueMap.putIfAbsent(name, new ManyToOneConcurrentArrayQueue<>(2048));
+    }
+
+    @Override
+    public void publishMessage(String name, Object message) {
+        var queue = messageQueueMap.get(name);
+        if (queue != null) {
+            queue.offer(message);
+        }
+    }
+
+    @Override
+    public void startup() {
+        if (startup.get()) {
+            return;
+        }
+
+        if (startup.compareAndSet(false, true)) {
+            var threadFactory = ExecutorKit.createSigleThreadFactory("Publisher");
+            executorService = ExecutorKit.newSingleThreadExecutor(threadFactory);
+            executorService.submit(this.getPublisherRunnable());
+        }
+    }
+
+    protected void close() {
+        publicationMap.values().forEach(Publication::close);
+    }
+
+    @Override
+    public void shutdown() {
+        running = false;
+        if (executorService != null) {
+            executorService.shutdown();
+        }
+    }
+
+    @Override
+    public PublisherRunnable getPublisherRunnable() {
+        return publisherRunnable;
+    }
+}
+
+// 在 DevKit.print 中的打印中花费了 800 微妙
+@Slf4j
+@SuppressWarnings("all")
+public class RequestMessageOnFragment extends AbstractRequestOnFragment {
+    protected final RequestMessageDecoder decoder = new RequestMessageDecoder();
+
+    @Override
+    public void process(DirectBuffer buffer, int offset, int actingBlockLength, int actingVersion, Header header) {
+        long nanoTime = System.nanoTime();
+        decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+
+        var message = new RequestMessage();
+        SbeKit.decoderMessageCommon(message, decoder.common());
+        SbeKit.decoderUserIdentity(message, decoder.userIdentity());
+
+        message.setHopCount(decoder.hopCount());
+
+        extracted(message);
+
+        var dataLength = decoder.dataLength();
+        var dataBytes = ByteKit.ofBytes(dataLength);
+        decoder.getData(dataBytes, 0, dataLength);
+        message.setData(dataBytes);
+
+        var attachmentLength = decoder.attachmentLength();
+        var attachmentBytes = ByteKit.ofBytes(attachmentLength);
+        decoder.getAttachment(attachmentBytes, 0, attachmentLength);
+        message.setAttachment(attachmentBytes);
+
+        commonProcess(message, CommunicationType.INTERNAL_CALL);
+
+        if (DevKit.print) {
+            log.info("userId:{} - {}", message.getUserId(),
+                    TimeKit.elapsedMicros(message.getNanoTime())
+            );
+        }
+
+        DevKit.monitor.record(TimeKit.elapsedMicros(message.getNanoTime()));
+
+        DevKit.requestOnFragmentTimes(nanoTime);
+    }
+
+    protected void extracted(RequestMessage message) {
+        decoder.bindingLogicServerIds();
+    }
+
+    @Override
+    public int getTemplateId() {
+        return RequestMessageDecoder.TEMPLATE_ID;
+    }
+}
+
+@UtilityClass
+public final class DevKit {
+    public AtomicBoolean devEnterprise = new AtomicBoolean();
+
+    public BlockingQueue<Long> requestOnFragmentTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> handleTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> callTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> ofFutureTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> ofFutureGetTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> requestSbeTimes = new LinkedBlockingQueue<>();
+    public BlockingQueue<Long> responseSbeTimes = new LinkedBlockingQueue<>();
+    public LongAdder avgMicrosTime = new LongAdder();
+    public boolean print;
+    public IpcLatencyMonitor monitor = new IpcLatencyMonitor();
+
+    public void requestSbeTimes(long nanoTime) {
+        requestSbeTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void responseSbeTimes(long nanoTime) {
+        responseSbeTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void ofFutureTimes(long nanoTime) {
+        ofFutureTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void ofFutureGetTimes(long nanoTime) {
+        ofFutureGetTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void requestOnFragmentTimes(long nanoTime) {
+        requestOnFragmentTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void handleTimes(long nanoTime) {
+        handleTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void callTimes(long nanoTime) {
+        callTimes.offer(System.nanoTime() - nanoTime);
+    }
+
+    public void reset() {
+        ofFutureTimes.clear();
+        requestSbeTimes.clear();
+        ofFutureGetTimes.clear();
+
+        requestOnFragmentTimes.clear();
+        handleTimes.clear();
+        responseSbeTimes.clear();
+
+
+        callTimes.clear();
+        avgMicrosTime.reset();
+        monitor.reset();
+    }
+
+    public String toString(String title, BlockingQueue<Long> times) {
+        return new DataPanel(title, times).toString();
+    }
+
+    private static class DataPanel {
+        final String title;
+        final BlockingQueue<Long> times;
+        long sumTime;
+
+        DataPanel(String title, BlockingQueue<Long> times) {
+            this.title = title;
+            this.times = times;
+        }
+
+        @Override
+        public String toString() {
+
+            int size = times.size();
+
+            Long value;
+            while ((value = times.poll()) != null) {
+                sumTime += value;
+            }
+
+            avgMicrosTime.add(sumTime / size / 1_000);
+
+            return """
+                    title: %s
+                    size: %s
+                    sumTime: %,d
+                    avgMicros: %,d
+                    avgMillis: %,d
+                    -----------------------
+                    """.formatted(title
+                    , size
+                    , sumTime
+                    , sumTime / size / 1_000
+                    , sumTime / size / 1_000_000
+            );
+        }
+    }
+}
+
+@Slf4j
+public final class IpcLatencyMonitor {
+    private final int MAX_BUCKETS = 10000; // 0~9999 微秒的分布桶
+    private final AtomicLongArray buckets = new AtomicLongArray(MAX_BUCKETS);
+    private final LongAdder totalCount = new LongAdder();
+    private final LongAdder totalMicros = new LongAdder();
+    private final AtomicLong maxMicros = new AtomicLong(0L);
+
+    /** 记录一次 IPC 延迟（单位：微秒） */
+    public void record(long micros) {
+        if (micros <= 0) return;
+
+        totalCount.increment();
+        totalMicros.add(micros);
+        updateMax(micros);
+
+        int index = (int) Math.min(micros, MAX_BUCKETS - 1);
+        buckets.incrementAndGet(index);
+    }
+
+    private void updateMax(long micros) {
+        long prev;
+        while (true) {
+            prev = maxMicros.get();
+            if (micros <= prev) {
+                return;
+            }
+            if (maxMicros.compareAndSet(prev, micros)) {
+                return;
+            }
+            // otherwise retry
+        }
+    }
+
+    /** 打印统计结果 */
+    public void printStats(String title) {
+        long count = totalCount.sum();
+        if (count == 0) {
+            log.info("[{}] 无统计数据", title);
+            return;
+        }
+
+        long avg = totalMicros.sum() / count;
+        long max = maxMicros.get();
+        long p95 = percentile(95);
+        long p99 = percentile(99);
+
+        log.info("""
+                        [{}] IPC 延迟统计：
+                        总次数: {}
+                        平均: {} µs
+                        P95: {} µs
+                        P99: {} µs
+                        最大: {} µs
+                        """,
+                title, count, avg, p95, p99, max
+        );
+    }
+
+    /** 计算百分位延迟（简单桶累加法） */
+    private long percentile(int percent) {
+        long count = totalCount.sum();
+        if (count == 0) return 0;
+
+        // 目标序号（1-based），确保至少为 1
+        long target = Math.max(1, (count * percent + 99) / 100); // 向上取整的近似
+        long cumulative = 0;
+        for (int i = 0; i < MAX_BUCKETS; i++) {
+            cumulative += buckets.get(i);
+            if (cumulative >= target) return i;
+        }
+        return MAX_BUCKETS - 1;
+    }
+
+    /** 重置统计数据 */
+    public void reset() {
+        for (int i = 0; i < MAX_BUCKETS; i++) {
+            buckets.set(i, 0L);
+        }
+
+        totalCount.reset();
+        totalMicros.reset();
+        maxMicros.set(0L);
+    }
+}
+```
+
+
+我发现性能的关键问题了，与 EnterprisePublisherRunnable.buffer 有关，设置成 64 时就很快，但如果设置成 2MB 就很慢，你看是不是这里的问题。
+```java
+buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(64));
+// CoreGlobalConfig.publisherBufferSize = 1024 * 1024 * 2;
+buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(CoreGlobalConfig.publisherBufferSize));
+```
