@@ -40,9 +40,7 @@ public class FlowContextSendAction {
     @ActionMethod(FlowContextSendCmd.sendEmpty)
     private boolean sendEmpty(FlowContext flowContext) {
         var cmdInfo = InternalCmd.of(InternalCmd.sendEmptyAction);
-        int data = 1;
-
-        flowContext.send(cmdInfo, data);
+        flowContext.send(cmdInfo);
         return true;
     }
 

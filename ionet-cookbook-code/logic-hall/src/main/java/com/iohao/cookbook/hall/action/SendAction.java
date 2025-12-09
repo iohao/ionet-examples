@@ -45,9 +45,7 @@ public class SendAction {
     @ActionMethod(SendCmd.sendEmpty)
     private boolean sendEmpty() {
         var cmdInfo = InternalCmd.of(InternalCmd.sendEmptyAction);
-        int data = 1;
-
-        communication().send(cmdInfo, data);
+        communication().send(cmdInfo);
         return true;
     }
 

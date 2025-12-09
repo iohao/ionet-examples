@@ -25,16 +25,16 @@ class OneClient {
     static List<InputCommandRegion> listInputCommandRegion() {
         return List.of(
                 new HallRegion()
-                , new RequestRegion()
+//                , new RequestRegion()
 //                , new AttachmentRegion()
 //                , new RoomRegion()
 //                , new Jsr380Region()
 //                , new FlowContextCallRegion()
 //                , new BroadcastRegion()
 //                , new FlowContextBroadcastRegion()
-//                , new FlowContextSendRegion()
+                , new FlowContextSendRegion()
 //                , new CallRegion()
-//                , new SendRegion()
+                , new SendRegion()
         );
     }
 }
