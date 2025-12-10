@@ -22,6 +22,7 @@ import com.iohao.net.app.RunOne;
 import com.iohao.net.extension.spring.ActionFactoryBeanForSpring;
 import com.iohao.net.external.core.config.ExternalGlobalConfig;
 import com.iohao.net.external.core.netty.ExternalMapper;
+import com.iohao.net.server.LogicServer;
 import com.iohao.spring.server.MyLogicServer;
 import io.aeron.Aeron;
 import org.springframework.boot.SpringApplication;
@@ -50,12 +51,16 @@ public class OneApplication {
                 .setAeron(aeron)
                 .enableCenterServer()
                 .setExternalServer(externalServer)
-                .setLogicServerList(List.of(new MyLogicServer()))
+                .setLogicServerList(listLogic())
                 .startup();
     }
 
     @Bean
     public ActionFactoryBeanForSpring actionFactoryBean() {
         return new ActionFactoryBeanForSpring();
+    }
+
+    static List<LogicServer> listLogic() {
+        return List.of(new MyLogicServer());
     }
 }
