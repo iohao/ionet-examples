@@ -32,6 +32,9 @@ import java.util.List;
 
 /**
  * Via CommunicationKit
+ * 1. call
+ * 2. callAsync
+ * 3. callFuture
  *
  * @author 渔民小镇
  * @date 2025-10-05
@@ -50,7 +53,7 @@ public class CallAction {
         var cmdInfo = InternalCmd.of(InternalCmd.emptyAction);
 
         // Asynchronous callback
-        communication().callback(cmdInfo, response -> {
+        communication().callAsync(cmdInfo, response -> {
             log.info("{}", response.getInt());
         });
 
@@ -66,7 +69,7 @@ public class CallAction {
         int data = 1;
 
         // Asynchronous callback
-        communication().callback(cmdInfo, data, response -> {
+        communication().callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getInt());
         });
 
@@ -82,7 +85,7 @@ public class CallAction {
         boolean data = true;
 
         // Asynchronous callback
-        communication().callback(cmdInfo, data, response -> {
+        communication().callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getBoolean());
         });
 
@@ -98,7 +101,7 @@ public class CallAction {
         long data = 1L;
 
         // Asynchronous callback
-        communication().callback(cmdInfo, data, response -> {
+        communication().callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getLong());
         });
 
@@ -114,7 +117,7 @@ public class CallAction {
         String data = "hello";
 
         // Asynchronous callback
-        communication().callback(cmdInfo, data, response -> {
+        communication().callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getString());
         });
 
@@ -130,7 +133,7 @@ public class CallAction {
         var data = new AuthorMessage();
 
         // Asynchronous callback
-        communication().callback(cmdInfo, data, response -> {
+        communication().callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getValue(BookMessage.class));
         });
 
@@ -146,7 +149,7 @@ public class CallAction {
         List<Integer> dataList = List.of(1, 2);
 
         // Asynchronous callback
-        communication().callbackListInt(cmdInfo, dataList, response -> {
+        communication().callAsyncListInt(cmdInfo, dataList, response -> {
             log.info("{}", response.listInt());
         });
 
@@ -162,7 +165,7 @@ public class CallAction {
         List<Boolean> dataList = List.of(true, false);
 
         // Asynchronous callback
-        communication().callbackListBool(cmdInfo, dataList, response -> {
+        communication().callAsyncListBool(cmdInfo, dataList, response -> {
             log.info("{}", response.listBoolean());
         });
 
@@ -178,7 +181,7 @@ public class CallAction {
         List<Long> dataList = List.of(1L, 2L);
 
         // Asynchronous callback
-        communication().callbackListLong(cmdInfo, dataList, response -> {
+        communication().callAsyncListLong(cmdInfo, dataList, response -> {
             log.info("{}", response.listLong());
         });
 
@@ -194,7 +197,7 @@ public class CallAction {
         List<String> dataList = List.of("hello", "ionet");
 
         // Asynchronous callback
-        communication().callbackListString(cmdInfo, dataList, response -> {
+        communication().callAsyncListString(cmdInfo, dataList, response -> {
             log.info("{}", response.listString());
         });
 
@@ -217,7 +220,7 @@ public class CallAction {
         List<AuthorMessage> dataList = List.of(author1, author2);
 
         // Asynchronous callback
-        communication().callback(cmdInfo, dataList, response -> {
+        communication().callAsync(cmdInfo, dataList, response -> {
             log.info("{}", response.listValue(BookMessage.class));
         });
 

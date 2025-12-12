@@ -27,7 +27,7 @@ public class FlowContextCallAction {
         var cmdInfo = InternalCmd.of(InternalCmd.emptyAction);
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, response -> {
+        flowContext.callAsync(cmdInfo, response -> {
             log.info("{}", response.getInt());
         });
 
@@ -43,7 +43,7 @@ public class FlowContextCallAction {
         int data = 1;
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, data, response -> {
+        flowContext.callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getInt());
         });
 
@@ -59,7 +59,7 @@ public class FlowContextCallAction {
         boolean data = true;
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, data, response -> {
+        flowContext.callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getBoolean());
         });
 
@@ -75,7 +75,7 @@ public class FlowContextCallAction {
         long data = 1L;
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, data, response -> {
+        flowContext.callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getLong());
         });
 
@@ -91,7 +91,7 @@ public class FlowContextCallAction {
         String data = "hello";
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, data, response -> {
+        flowContext.callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getString());
         });
 
@@ -107,7 +107,7 @@ public class FlowContextCallAction {
         var data = new AuthorMessage();
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, data, response -> {
+        flowContext.callAsync(cmdInfo, data, response -> {
             log.info("{}", response.getValue(BookMessage.class));
         });
 
@@ -123,7 +123,7 @@ public class FlowContextCallAction {
         List<Integer> dataList = List.of(1, 2);
 
         // Asynchronous callback
-        flowContext.callbackListInt(cmdInfo, dataList, response -> {
+        flowContext.callAsyncListInt(cmdInfo, dataList, response -> {
             log.info("{}", response.listInt());
         });
 
@@ -139,7 +139,7 @@ public class FlowContextCallAction {
         List<Boolean> dataList = List.of(true, false);
 
         // Asynchronous callback
-        flowContext.callbackListBool(cmdInfo, dataList, response -> {
+        flowContext.callAsyncListBool(cmdInfo, dataList, response -> {
             log.info("{}", response.listBoolean());
         });
 
@@ -155,7 +155,7 @@ public class FlowContextCallAction {
         List<Long> dataList = List.of(1L, 2L);
 
         // Asynchronous callback
-        flowContext.callbackListLong(cmdInfo, dataList, response -> {
+        flowContext.callAsyncListLong(cmdInfo, dataList, response -> {
             log.info("{}", response.listLong());
         });
 
@@ -171,7 +171,7 @@ public class FlowContextCallAction {
         List<String> dataList = List.of("hello", "ionet");
 
         // Asynchronous callback
-        flowContext.callbackListString(cmdInfo, dataList, response -> {
+        flowContext.callAsyncListString(cmdInfo, dataList, response -> {
             log.info("{}", response.listString());
         });
 
@@ -194,7 +194,7 @@ public class FlowContextCallAction {
         List<AuthorMessage> dataList = List.of(author1, author2);
 
         // Asynchronous callback
-        flowContext.callback(cmdInfo, dataList, response -> {
+        flowContext.callAsync(cmdInfo, dataList, response -> {
             log.info("{}", response.listValue(BookMessage.class));
         });
 

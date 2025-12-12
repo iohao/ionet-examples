@@ -13,7 +13,7 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <ionet.version>25.1</ionet.version>
+        <ionet.version>25.2</ionet.version>
         <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
         <logback.version>1.5.21</logback.version>
     </properties>

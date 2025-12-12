@@ -53,7 +53,6 @@ public final class SimpleAeronManager {
         System.setProperty("aeron.interServiceTimeoutNs", String.valueOf(DEBUG_INTER_SERVICE_TIMEOUT_NS));
     }
 
-
     public Aeron getAeron() {
         log.info("Connecting Aeron Client...");
         var aeronCtx = new Aeron.Context();

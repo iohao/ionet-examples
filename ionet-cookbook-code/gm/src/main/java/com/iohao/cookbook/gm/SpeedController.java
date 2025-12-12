@@ -61,7 +61,7 @@ public final class SpeedController {
         var communication = CommunicationKit.getCommunication();
         var cmd = SpeedCmd.of(SpeedCmd.requestVoidBefore);
 
-        communication.callback(cmd, sendCount, _ -> {
+        communication.callAsync(cmd, sendCount, _ -> {
             var requestCmd = SpeedCmd.of(SpeedCmd.requestVoid);
             for (int i = 0; i < sendCount; i++) {
                 communication.send(requestCmd);
@@ -81,10 +81,10 @@ public final class SpeedController {
         var communication = CommunicationKit.getCommunication();
         var cmd = SpeedCmd.of(SpeedCmd.requestBoolBefore);
 
-        communication.callback(cmd, sendCount, response -> {
+        communication.callAsync(cmd, sendCount, response -> {
             var requestCmd = SpeedCmd.of(SpeedCmd.requestBool);
             for (int i = 0; i < sendCount; i++) {
-                communication.callback(requestCmd, _ -> {
+                communication.callAsync(requestCmd, _ -> {
                 });
             }
         });
@@ -197,7 +197,7 @@ public final class SpeedController {
         communication.getTraceId();
         var cmd = SpeedCmd.of(SpeedCmd.requestBoolBefore);
 
-        communication.callback(cmd, sendCount, response -> {
+        communication.callAsync(cmd, sendCount, response -> {
             NetServerSetting setting = GameManagerKit.setting;
 
             var requestCmd = SpeedCmd.of(SpeedCmd.requestBool);

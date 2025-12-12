@@ -44,7 +44,7 @@ public final class OnExternalAction {
     private int userOnlineCount(FlowContext flowContext) {
         int onlineCount = 0;
 
-        var responseCollectExternal = flowContext.callCollectExternal(MyOnExternalTemplateId.userOnlineCount);
+        var responseCollectExternal = flowContext.callExternalCollect(MyOnExternalTemplateId.userOnlineCount);
         for (var externalResponse : responseCollectExternal.getResponseList()) {
             int externalServerId = externalResponse.getExternalServerId();
             int count = externalResponse.getPayloadAsInt();

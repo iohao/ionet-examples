@@ -18,9 +18,7 @@
  */
 package com.iohao.cookbook.ws.verify.external;
 
-import com.iohao.cookbook.common.HallCmd;
 import com.iohao.cookbook.common.WsVerifyCmd;
-import com.iohao.cookbook.common.message.UserMessage;
 import com.iohao.net.extension.client.AbstractInputCommandRegion;
 import com.iohao.net.extension.client.join.ClientRunOne;
 import com.iohao.net.extension.client.kit.ClientUserConfigs;
