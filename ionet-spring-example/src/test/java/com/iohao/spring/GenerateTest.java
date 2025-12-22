@@ -74,8 +74,8 @@ public final class GenerateTest {
     }
 
     private static void supportSpringAction() {
-        // 支持 Spring 构造注入
-        // supportSpringAction
+        // 支持 Spring 构造注入。
+        // supportSpringAction.
         DependencyInjectionPart dependencyInjectionPart = DependencyInjectionPart.me();
         dependencyInjectionPart.injection = true;
         dependencyInjectionPart.annotationClass = Component.class;
