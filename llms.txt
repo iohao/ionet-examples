@@ -1,0 +1,273 @@
+# ionet-examples
+
+Example collection for ionet (ioGame) - a Java-based game server framework (v25.3).
+
+## Project Structure
+
+```
+ionet-examples/
+├── ionet-quick-demo/          # Minimal server example with executable JAR
+├── ionet-cookbook-code/       # Comprehensive examples (9 sub-modules)
+│   ├── common-data/           # Shared data models, commands, error codes
+│   ├── logic-hall/            # Player hall logic, requests, broadcasts
+│   ├── logic-room/            # Game room logic
+│   ├── logic-internal/        # Internal service communication
+│   ├── external/              # WebSocket external connections
+│   ├── gm/                    # Game management module
+│   ├── example-ws-token/      # WebSocket token authentication example
+│   ├── one-application/       # Aggregator module
+│   └── one-client/            # Client for testing
+├── ionet-spring-example/      # Spring Boot 4.0.0 integration
+└── ionet-sdk-example/         # SDK code generation (C#/TypeScript/Godot)
+```
+
+## Build Commands
+
+```bash
+# Install all modules
+mvn install
+
+# Compile
+mvn compile
+
+# Package (creates JARs)
+mvn clean package
+
+# Run quick demo JAR
+java --add-opens java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED -jar ionet-quick-demo/target/ionet-quick-demo.jar
+```
+
+## Architecture
+
+Microservices-like architecture with separate logic servers communicating via Aeron IPC:
+
+```
+one-application (aggregator)
+├── logic-hall      # Player hall, requests, broadcasts
+├── logic-room      # Game room logic
+├── logic-internal  # Internal service communication
+└── external        # WebSocket external connections
+```
+
+## Key Patterns
+
+### Action Controller
+- `@ActionController` - Marks a class as an action controller
+- `@ActionMethod` - Marks a method as an action handler
+- `@VirtualThread` - Marks a method to run in virtual thread
+
+### Command Classes
+Separate command interfaces in `common-data` for different business domains:
+- `HallCmd.java` - Hall-related commands (loginVerify, hello, internalOffline)
+- `RoomCmd.java` - Room-related commands (createRoom, enterRoom, quitRoom, ready, operation)
+- `BroadcastCmd.java` - Broadcast-related commands (broadcastUser, broadcastUsers, broadcastMulticast)
+- `ErrorCodeCmd.java` - Error code example commands (index, throwsExample)
+- `CallCmd.java` - Inter-server call commands
+- `SendCmd.java` - Server-to-server send commands
+- `RequestCmd.java` - Request/response pattern commands
+- `InternalCmd.java` - Internal service communication commands
+- `Jsr380Cmd.java` - Bean validation (JSR-380) commands
+- `FlowContextCallCmd.java` - FlowContext-based call commands
+- `FlowContextSendCmd.java` - FlowContext-based send commands
+- `FlowContextBroadcastCmd.java` - FlowContext-based broadcast commands
+
+### Broadcast
+Server-initiated push notifications to clients:
+- `broadcastUser` - Push to single user
+- `broadcastUsers` - Push to multiple users
+- `broadcastMulticast` - Push to all connected users
+
+### FlowContext
+Request context passing between servers, provides:
+- `getUserId()` - Get current user ID
+- `bindingUserId(long)` - Bind user ID to context
+- Inter-server communication via `CommunicationKit`
+
+## ionet-cookbook-code Detailed Examples
+
+### common-data Module
+Shared models and commands for all logic servers:
+
+**Message Classes:**
+- `UserMessage.java` - User information (id, nickname)
+- `BookMessage.java` - Book data (bookName, authorName)
+- `ErrorCode.java` - Error code enum implementing `ErrorInformation`
+- `ErrorCodeMessage.java` - Test message for ErrorInformation methods
+- `ErrorCodeThrowsMessage.java` - Test message for assertXxxThrows methods
+- `PlayerMessage.java` - Player data
+- `ReadyMessage.java` - Ready status message
+- `EnterRoomMessage.java` - Room entry message
+- `MyOperationCommandMessage.java` - Operation command message
+- `MyOperationEnum.java` - Operation enum for room operations
+- `ValidMessage.java` - Message for JSR-380 validation testing
+- `EmailMethodEventMessage.java` - Email event message
+- `EmailAnyMessage.java` - Any-type email message
+
+**Command Interfaces:**
+- `CmdModule.java` - Module command constants
+- `HallCmd.java` - Hall commands (cmd=10)
+- `RoomCmd.java` - Room commands (cmd=11) with broadcast commands
+- `BroadcastCmd.java` - Broadcast commands (cmd=12)
+- `CallCmd.java` - Inter-server call commands (cmd=20)
+- `SendCmd.java` - Server send commands (cmd=21)
+- `RequestCmd.java` - Request commands (cmd=22)
+- `InternalCmd.java` - Internal communication commands (cmd=23)
+- `Jsr380Cmd.java` - Validation commands (cmd=24)
+- `ErrorCodeCmd.java` - Error code example commands (cmd=16)
+- `FlowContextCallCmd.java` - FlowContext call commands (cmd=25)
+- `FlowContextSendCmd.java` - FlowContext send commands (cmd=26)
+- `FlowContextBroadcastCmd.java` - FlowContext broadcast commands (cmd=27)
+
+**Extension/Utility Classes:**
+- `UserKit.java` - User management utility (in-memory user storage)
+- `VirtualThread.java` - Annotation for virtual thread execution
+- `Hello.java` - Simple hello message
+
+### logic-hall Module
+Player hall actions handling user management, broadcasts, and inter-server communication:
+
+**Actions:**
+- `HallAction.java` - Hall actions:
+  - `loginVerify` - User login verification with JWT
+  - `hello` - Simple hello response
+  - `internalOffline` - Handle user offline event
+- `BroadcastAction.java` - All broadcast types:
+  - `triggerBroadcastUser` - Broadcast to single user (empty, int, bool, long, string, object, lists)
+  - `triggerBroadcastUsers` - Broadcast to multiple users (same types)
+  - `triggerBroadcastMulticast` - Broadcast to all users (same types)
+- `CallAction.java` - Inter-server call examples:
+  - Call methods with various return types (empty, int, bool, long, string, object, lists)
+- `SendAction.java` - Server-to-server send examples:
+  - Send methods with various types
+- `RequestAction.java` - Request/response pattern examples:
+  - Request methods with various return types
+- `ErrorCodeAction.java` - ErrorInformation interface examples:
+  - `index` - Demonstrates getCode, getMessage, require, assertTrue, assertNonNull
+  - `throwsExample` - Demonstrates assertTrueThrows, assertNullThrows
+- `Jsr380Action.java` - JSR-380 bean validation:
+  - `verifyData` - Validates message using bean validation annotations
+- `FlowContextCallAction.java` - FlowContext-based calls:
+  - Call methods using FlowContext
+- `FlowContextSendAction.java` - FlowContext-based sends:
+  - Send methods using FlowContext
+- `FlowContextBroadcastAction.java` - FlowContext-based broadcasts:
+  - Broadcast methods using FlowContext
+- `PressureAction.java` - Pressure testing related actions
+- `GameManagerAction.java` - Game management actions
+- `AttachmentAction.java` - Attachment handling
+- `OnExternalAction.java` - External connection actions
+
+### logic-room Module
+Game room logic with operation handlers:
+
+**Actions:**
+- `RoomAction.java` - Room management:
+  - `createRoom` - Create a new game room
+  - `enterRoom` - Join an existing room
+  - `quitRoom` - Leave the current room
+  - `ready` - Set player ready status
+  - `operation` - Handle custom room operations
+  - `listRoomId` - List all available room IDs
+
+**Services:**
+- `MyRoomService.java` - Room management service:
+  - `createRoom()` - Create new room
+  - `getRoom(long roomId)` - Get room by ID
+  - `getRoomByUserId(long userId)` - Get room by user ID
+  - `optionalRoomByUserId(long userId)` - Optional room lookup
+  - `addRoom(Room room)` - Add room to management
+  - `listRoom()` - List all rooms
+  - `getUserOperationHandler(MyOperationEnum)` - Get operation handler
+
+**Operation Handlers (operation/):**
+- `EnterRoomOperationHandler.java` - Handle room entry
+- `ReadyOperationHandler.java` - Handle ready status change
+- Custom operation handlers implementing `OperationHandler`
+
+**Data:**
+- `InternalOperationEnum.java` - Internal operation enum
+- Room-specific data models
+
+### logic-internal Module
+Internal service communication examples:
+- Inter-server communication patterns
+- Service discovery and invocation
+
+### external Module
+WebSocket external connection handling:
+- `ExternalServer.java` - WebSocket server configuration
+- Connection management and authentication
+
+### gm Module
+Game management features:
+- Administrative actions
+- Server monitoring and management
+
+### example-ws-token Module
+WebSocket token authentication example:
+- JWT-based authentication
+- Token verification and user binding
+
+## Key Interfaces
+
+### ErrorInformation
+Implemented by error code enums. Provides validation and error handling methods:
+
+```java
+public interface ErrorInformation {
+    int getCode();
+    String getMessage();
+    <T> T require(T value);
+    void assertTrue(boolean condition);
+    void assertTrueThrows(boolean condition);
+    void assertNonNull(Object obj);
+    void assertNullThrows(Object obj);
+}
+```
+
+**Example Usage:**
+```java
+// Get error info
+int code = ErrorCode.illegalOperation.getCode();
+String msg = ErrorCode.illegalOperation.getMessage();
+
+// Validate input
+String name = ErrorCode.illegalOperation.require(message.name);
+
+// Assert conditions
+ErrorCode.loginFailed.assertTrue(success);
+ErrorCode.roomNotExist.assertNonNull(room);
+
+// Expected failure scenarios
+ErrorCode.illegalOperation.assertTrueThrows(Objects.nonNull(roomByUserId));
+ErrorCode.roomNotExist.assertNullThrows(room);
+```
+
+### Room Extension
+Game room management with operation handlers:
+
+```java
+// Create and manage rooms
+Room room = roomService.createRoom();
+roomService.addRoom(room);
+
+// Room operations
+room.operation(InternalOperationEnum.enterRoom, flowContext);
+room.operation(operationHandler, flowContext, command);
+```
+
+## Conventions
+
+- **JVM Options**: Always use `--add-opens java.base/jdk.internal.misc=ALL-UNNAMED --enable-native-access=ALL-UNNAMED` when running servers
+- **SDK Method Names**: Use `@DocumentMethod` annotation to fix method names before SDK code generation
+- **i18n**: Use `Locale.setDefault(Locale.US)` or `Locale.CHINA` for consistent behavior
+- **Virtual Threads**: Use `@VirtualThread` annotation for blocking operations
+
+## Documentation
+
+- Main docs: https://iohao.github.io/ionet/docs/
+- Spring integration: https://iohao.github.io/ionet/docs/manual/integration_spring
+
+## Related Projects
+
+- ionet framework: https://github.com/iohao/ioGame
