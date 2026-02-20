@@ -6,6 +6,9 @@ Documentation
 - https://iohao.github.io/ionet
 - https://iohao.github.io/ionet/docs/intro
 
+License
+- [GNU Affero General Public License v3.0 (AGPL-3.0-only)](LICENSE)
+
 This repository contains a collection of all examples from the ionet documentation. Each directory is an independent example project.
 
 | **Directory, Source Code** | **Description, Documentation** |

@@ -1,0 +1,31 @@
+# Open crawl policy for search engines and AI crawlers
+User-agent: *
+Allow: /
+
+# Explicitly allowed AI/search bots
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: bingbot
+Allow: /
+
+# Replace if your production host differs
+Sitemap: https://iohao.github.io/ionet/sitemap.xml
