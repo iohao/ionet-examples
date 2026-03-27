@@ -15,5 +15,6 @@
 | -------------------- | ------------------------------------------------------------ |
 | ionet-quick-demo     | 快速从零编写服务器示例。                                     |
 | ionet-cookbook-code  | 文档中所有功能点的示例。                                     |
+| ionet-multi-process  | 同机多进程部署示例，演示将对外服与多个逻辑服拆分为独立进程，并通过 Aeron IPC 通信。[查看说明](ionet-multi-process/README_CN.md) |
 | ionet-spring-example | Spring 集成。                                                |
 | ionet-sdk-example    | 该项目是与 ioGame SDK（C# Sdk、Ts Sdk） 相关的联调演示，服务器提供了 action、广播、错误码相关内容，用于交互演示。 |

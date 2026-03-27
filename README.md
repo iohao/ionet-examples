@@ -15,5 +15,6 @@ This repository contains a collection of all examples from the ionet documentati
 | -------------------- | ------------------------------------------------------------ |
 | ionet-quick-demo | A quick example of writing a server from scratch. |
 | ionet-cookbook-code | Examples for all feature points in the documentation (Cookbook). |
+| ionet-multi-process | Multi-process deployment example on a single machine. Demonstrates splitting the external server and multiple logic servers into independent processes communicating over Aeron IPC. [See details](ionet-multi-process/README.md) |
 | ionet-spring-example | Spring integration. |
 | ionet-sdk-example | This project is a joint debugging demonstration related to the ioGame SDK (C# Sdk, Ts Sdk). The server provides content related to actions, broadcasts, and error codes for interactive demonstration. |
