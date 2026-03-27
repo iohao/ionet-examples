@@ -1,6 +1,6 @@
 package com.iohao.cookbook;
 
-import com.iohao.cookbook.common.AeronLifecycleManager;
+import com.iohao.cookbook.common.EmbeddedAeronRuntime;
 import com.iohao.cookbook.common.extension.MyFlowContext;
 import com.iohao.cookbook.common.extension.UserKit;
 import com.iohao.cookbook.external.MyExternalServer;
@@ -33,7 +33,7 @@ class OneApplication {
         Locale.setDefault(Locale.US);
 //        Locale.setDefault(Locale.CHINA);
 
-        var aeron = new AeronLifecycleManager().getAeron();
+        var aeron = new EmbeddedAeronRuntime().getAeron();
 
         var externalServer = MyExternalServer.builder(
                 ExternalGlobalConfig.externalPort

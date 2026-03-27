@@ -45,7 +45,7 @@ public class DemoApplication {
         int port = ExternalGlobalConfig.externalPort;
         var externalServer = ExternalMapper.builder(port).build();
 
-        var aeron = new AeronLifecycleManager().getAeron();
+        var aeron = new EmbeddedAeronRuntime().getAeron();
 
         new RunOne()
                 // aeron

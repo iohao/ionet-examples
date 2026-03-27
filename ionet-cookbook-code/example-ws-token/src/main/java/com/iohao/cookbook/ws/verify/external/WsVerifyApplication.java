@@ -18,7 +18,7 @@
  */
 package com.iohao.cookbook.ws.verify.external;
 
-import com.iohao.cookbook.common.AeronLifecycleManager;
+import com.iohao.cookbook.common.EmbeddedAeronRuntime;
 import com.iohao.cookbook.hall.HallLogicServer;
 import com.iohao.net.app.RunOne;
 import com.iohao.net.external.core.ExternalServer;
@@ -42,7 +42,7 @@ public final class WsVerifyApplication {
         Locale.setDefault(Locale.US);
 //        Locale.setDefault(Locale.CHINA);
 
-        var aeron = new AeronLifecycleManager().getAeron();
+        var aeron = new EmbeddedAeronRuntime().getAeron();
 
         new RunOne()
                 .setAeron(aeron)

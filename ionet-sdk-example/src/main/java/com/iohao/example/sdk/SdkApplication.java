@@ -26,6 +26,7 @@ import com.iohao.net.external.core.ExternalServer;
 import com.iohao.net.external.core.config.ExternalGlobalConfig;
 import com.iohao.net.external.core.hook.internal.IdleProcessSetting;
 import com.iohao.net.external.core.netty.ExternalMapper;
+import com.iohao.net.framework.CoreGlobalConfig;
 import com.iohao.net.server.LogicServer;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,13 +40,13 @@ import java.util.Locale;
 @Slf4j
 public final class SdkApplication {
     static void main() {
-//        CoreGlobalConfig.setting.parseDoc = true;
-//        CoreGlobalConfig.setting.print = true;
+        CoreGlobalConfig.setting.parseDoc = true;
+        CoreGlobalConfig.setting.print = true;
 
         // i18n: CHINA or US
         Locale.setDefault(Locale.US);
         new RunOne()
-                .setAeron(new AeronLifecycleManager().getAeron())
+                .setAeron(new EmbeddedAeronRuntime().getAeron())
                 .enableCenterServer()
                 .setExternalServer(createExternalServer())
                 .setLogicServerList(listLogic())

@@ -59,7 +59,7 @@ public final class SimpleAeronManager {
         aeronCtx.driverTimeoutMs(DEBUG_DRIVER_TIMEOUT_MS);
 
         aeronCtx.idleStrategy(new SleepingMillisIdleStrategy(1));
-        aeronCtx.aeronDirectoryName(AeronLifecycleManager.getAeronDirectoryName());
+        aeronCtx.aeronDirectoryName(EmbeddedAeronRuntime.getAeronDirectoryName());
 
         var handler = new DefaultUnavailableImageHandler();
         aeronCtx.unavailableImageHandler(handler);

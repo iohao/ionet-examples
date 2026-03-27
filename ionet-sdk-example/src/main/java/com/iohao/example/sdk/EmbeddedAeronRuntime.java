@@ -16,59 +16,45 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.iohao.cookbook.common;
+package com.iohao.example.sdk;
 
-import com.iohao.cookbook.common.extension.UserKit;
 import com.iohao.net.server.connection.DefaultUnavailableImageHandler;
 import io.aeron.Aeron;
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
-import org.agrona.concurrent.BusySpinIdleStrategy;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.agrona.concurrent.SleepingMillisIdleStrategy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("all")
-public class AeronLifecycleManager {
-    static final Logger log = LoggerFactory.getLogger(AeronLifecycleManager.class);
+/**
+ * @author 渔民小镇
+ * @date 2023-01-06
+ */
+@Slf4j
+class EmbeddedAeronRuntime {
+    String aeronDirectoryName = "%s-%s".formatted(CommonContext.getAeronDirectoryName(), "ionet");
 
-    // 10 分钟 (600 秒) 的纳秒值
     public static final long DEBUG_CLIENT_TIMEOUT_NS = 600_000_000_000L;
-    // 10 分钟 (600 秒) 的毫秒值，用于 aeron.driver.timeout
     public static final long DEBUG_DRIVER_TIMEOUT_MS = 600_000L;
-    // 15 分钟 (900 秒) 的纳秒值
     public static final long DEBUG_UNBLOCK_TIMEOUT_NS = 900_000_000_000L;
-    // 略大于 10 分钟的纳秒值
     public static final long DEBUG_INTER_SERVICE_TIMEOUT_NS = DEBUG_CLIENT_TIMEOUT_NS + 1_000_000_000L;
 
     static {
-        // 🚀 1. 延长客户端等待 Driver 出现的心跳超时 (单位: 毫秒)
         System.setProperty("aeron.driver.timeout", String.valueOf(DEBUG_DRIVER_TIMEOUT_MS));
-
-        // 🚀 2. 延长客户端保活间隔 (单位: 纳秒)
         System.setProperty("aeron.keepAliveIntervalNs", String.valueOf(DEBUG_CLIENT_TIMEOUT_NS));
-
-        // 🚀 3. 延长客户端集群服务超时，解决配置校验 (单位: 纳秒)
         System.setProperty("aeron.interServiceTimeoutNs", String.valueOf(DEBUG_INTER_SERVICE_TIMEOUT_NS));
     }
 
     private MediaDriver mediaDriver;
+    @Getter
     private Aeron aeron;
 
-    public static String getAeronDirectoryName() {
-        return "%s-%s".formatted(CommonContext.getAeronDirectoryName(), "ionet");
-    }
-
-    public AeronLifecycleManager() {
+    public EmbeddedAeronRuntime() {
         initMediaDriver();
         initAeron();
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::destroy));
-    }
-
-    public Aeron getAeron() {
-        return aeron;
     }
 
     // MediaDriver Bean
@@ -80,15 +66,12 @@ public class AeronLifecycleManager {
 
         log.info("Starting Aeron Embedded Media Driver...");
         var mediaDriverCtx = new MediaDriver.Context()
-                // 设置客户端心跳超时时间 (确保 Driver 知道 Client 10分钟后才断开)
                 .clientLivenessTimeoutNs(DEBUG_CLIENT_TIMEOUT_NS)
-                // 设置发布解除阻塞超时时间 (必须大于心跳超时)
                 .publicationUnblockTimeoutNs(DEBUG_UNBLOCK_TIMEOUT_NS)
                 // 确保使用独特的目录名并隔离，避免与其他 Media Driver 冲突
                 // Ensure a unique and isolated directory name is used to avoid conflicts with other Media Drivers
-                .aeronDirectoryName(getAeronDirectoryName())
+                .aeronDirectoryName(aeronDirectoryName)
                 .sharedIdleStrategy(new SleepingMillisIdleStrategy(1))
-//                .sharedIdleStrategy(new BusySpinIdleStrategy())
                 // 启动时清理旧目录，解决残留文件问题
                 // Clean up old directories on startup to resolve residual file issues
                 .dirDeleteOnStart(true)
@@ -118,13 +101,10 @@ public class AeronLifecycleManager {
         log.info("Connecting Aeron Client...");
         var aeronCtx = new Aeron.Context();
         aeronCtx.driverTimeoutMs(DEBUG_DRIVER_TIMEOUT_MS);
-
         aeronCtx.idleStrategy(new SleepingMillisIdleStrategy(1));
-//        aeronCtx.idleStrategy(new BusySpinIdleStrategy());
-
         // 确保客户端连接到驱动程序使用的目录
         // Ensure the client connects to the directory used by the driver
-        aeronCtx.aeronDirectoryName(getAeronDirectoryName());
+        aeronCtx.aeronDirectoryName(aeronDirectoryName);
 
         var handler = new DefaultUnavailableImageHandler();
         aeronCtx.unavailableImageHandler(handler);
@@ -155,9 +135,5 @@ public class AeronLifecycleManager {
         }
 
         log.info("Aeron components shut down successfully.");
-    }
-
-    static {
-        UserKit.ofUserMessage(1378604058);
     }
 }
