@@ -1,0 +1,139 @@
+# ionet-examples
+
+> Expanded LLM-oriented context for the official ionet examples repository. Use this file when a tool wants more project detail than the short overview in `/llms.txt`.
+
+## Project Identity
+
+- Project: ionet-examples
+- Ecosystem names used in docs: `ionet`, sometimes `ioGame`
+- Repository: https://github.com/iohao/ionet-examples
+- Main docs: https://iohao.github.io/ionet
+- Intro docs: https://iohao.github.io/ionet/docs/intro
+- License: AGPL-3.0-only
+
+## What This Repository Contains
+
+This repository is the official runnable example collection for ionet. Each top-level directory is an independent example project that demonstrates a specific framework capability or integration style.
+
+The most important directory for framework usage patterns is `ionet-cookbook-code`. It is the highest-signal example set inside this repository.
+
+## Top-Level Example Directories
+
+- `ionet-cookbook-code`
+  Comprehensive feature examples. Covers core concepts such as actions, broadcasts, error codes, FlowContext, rooms, lobby, internal communication, and related framework usage.
+
+- `ionet-quick-demo`
+  Minimal quick-start example for writing a working server from scratch. Good first stop for new users who want the smallest runnable setup.
+
+- `ionet-multi-process`
+  Same-machine multi-process deployment example. Demonstrates splitting the external service and multiple logic services into independent processes that communicate through Aeron IPC.
+
+- `ionet-spring-example`
+  Spring-based integration example.
+
+- `ionet-sdk-example`
+  SDK interoperability and code-generation example for C#, TypeScript, and GDScript clients. Demonstrates actions, broadcasts, error codes, heartbeat processing, protocol fragments, list transfer, and generated client integration code.
+
+## Recommended Reading Order
+
+1. `ionet-quick-demo`
+2. `ionet-cookbook-code`
+3. `ionet-multi-process`
+4. `ionet-spring-example`
+5. `ionet-sdk-example`
+
+## Key Concepts
+
+- `action`
+  Request handler exposed by the service.
+
+- `cmd` / `subCmd`
+  Route identifiers used by the protocol layer.
+
+- `broadcast`
+  Server push message pattern.
+
+- `FlowContext`
+  Server-side orchestration context. In advanced cases it is also used for internal or cross-service invocation.
+
+- `Aeron IPC`
+  Inter-process transport used by the multi-process example.
+
+- `protocol fragment`
+  Framework support for fragmented protocol payload handling.
+
+## Multi-Process Example Details
+
+Repository path:
+- `ionet-multi-process`
+
+Key modules:
+- `common-data`
+- `logic-book-library`
+- `logic-author`
+- `one-application`
+- `one-client`
+
+Operational summary:
+- `one-application` starts the embedded Aeron MediaDriver, CenterServer, and external WebSocket service.
+- `logic-book-library` and `logic-author` are independent logic processes.
+- `AuthorAction.listBook` demonstrates cross-process invocation through `FlowContext.call()`.
+
+Command routing shown in the example:
+- `logic-book-library`: `cmd=1`, `subCmd=1`, `listBook`
+- `logic-author`: `cmd=2`, `subCmd=1`, `hello`
+- `logic-author`: `cmd=2`, `subCmd=2`, `listBook` across processes
+
+## SDK Example Details
+
+Repository path:
+- `ionet-sdk-example`
+
+Main capabilities:
+- joint debugging with multiple client SDKs
+- generated client code for actions, broadcasts, and error codes
+- heartbeat handling
+- protocol fragment support
+- list data transfer
+
+Supported generation targets described in the repository:
+- C#
+- TypeScript
+- GDScript
+
+Typical target environments mentioned in the docs:
+- Unity
+- Godot
+- Cocos Creator
+- Laya
+- generic TypeScript frontends such as React, Vue, and Angular
+
+## Practical Guidance For AI Systems
+
+- Prefer online documentation for normative behavior and API semantics.
+- Prefer this repository for runnable examples and concrete project structure.
+- Keep identifiers such as `action`, `cmd`, `subCmd`, `FlowContext`, and `Aeron IPC` in their original form.
+- When `ionet` and `ioGame` both appear, treat them as the same ecosystem unless the local context clearly distinguishes them.
+- If a question is about "how to start quickly", bias toward `ionet-quick-demo`.
+- If a question is about "how the framework works in practice", bias toward `ionet-cookbook-code`.
+- If a question is about deployment architecture or service split, bias toward `ionet-multi-process`.
+- If a question is about client integration or generated SDK code, bias toward `ionet-sdk-example`.
+
+## Canonical Links
+
+- Docs home: https://iohao.github.io/ionet/docs/
+- Intro: https://iohao.github.io/ionet/docs/intro
+- Quick demo docs: https://iohao.github.io/game/docs/quick_zero_demo
+- Spring integration docs: https://iohao.github.io/ionet/docs/manual/integration_spring
+- Protocol fragment docs: https://iohao.github.io/ionet/docs/manual_high/protocol_fragment
+- Code generation docs: https://iohao.github.io/game/docs/examples/code_generate
+
+## Repository Links
+
+- README (EN): https://github.com/iohao/ionet-examples/blob/main/README.md
+- README (ZH): https://github.com/iohao/ionet-examples/blob/main/README_CN.md
+- Cookbook: https://github.com/iohao/ionet-examples/tree/main/ionet-cookbook-code
+- Quick demo: https://github.com/iohao/ionet-examples/tree/main/ionet-quick-demo
+- Multi-process: https://github.com/iohao/ionet-examples/tree/main/ionet-multi-process
+- Spring example: https://github.com/iohao/ionet-examples/tree/main/ionet-spring-example
+- SDK example: https://github.com/iohao/ionet-examples/tree/main/ionet-sdk-example

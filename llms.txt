@@ -1,33 +1,66 @@
 # ionet-examples
 
-一句话介绍: ionet-examples 是 ionet (ioGame) 的官方示例集合，其中主要示例集中在 ionet-cookbook-code 目录，覆盖核心功能教程与实践。
+> Official example collection for ionet (also known in some docs as ioGame). This repository contains runnable examples for quick start, feature cookbook coverage, multi-process deployment, Spring integration, and SDK/code generation workflows.
 
-Canonical URLs
+## Canonical URLs
+
 - Website: https://iohao.github.io/ionet
-- Docs: https://iohao.github.io/ionet/docs/
-- GitHub: https://github.com/iohao/ionet-examples
-- README: https://github.com/iohao/ionet-examples/blob/main/README.md
+- Documentation Home: https://iohao.github.io/ionet/docs/
+- Introduction: https://iohao.github.io/ionet/docs/intro
+- GitHub Repository: https://github.com/iohao/ionet-examples
+- README (English): https://github.com/iohao/ionet-examples/blob/main/README.md
+- README (Chinese): https://github.com/iohao/ionet-examples/blob/main/README_CN.md
 
-License
+## License
+
 - GNU Affero General Public License v3.0 (AGPL-3.0-only)
-- License file: https://github.com/iohao/ionet-examples/blob/main/LICENSE
+- License File: https://github.com/iohao/ionet-examples/blob/main/LICENSE
 
-Key Capabilities
-- Quick demo: 从零启动可运行服务端示例
-- Cookbook (重点): 主要示例目录，覆盖 action、广播、错误码、FlowContext、内部通信、房间与大厅等核心功能点
-- Spring integration: 基于 Spring 的服务端集成示例
-- SDK interoperability: 支持 C#/TypeScript/Godot 等 SDK 联调与代码生成
-- Protocol features: 展示协议碎片与列表数据传输等高级能力
+## Repository Map
 
-Suggested Crawl Priority
+- https://github.com/iohao/ionet-examples/tree/main/ionet-cookbook-code
+  Primary example set. Covers major framework features and is the best entry point for understanding real usage patterns.
+- https://github.com/iohao/ionet-examples/tree/main/ionet-quick-demo
+  Minimal server example for starting from scratch. Useful for first-run setup and a small end-to-end reference.
+- https://github.com/iohao/ionet-examples/tree/main/ionet-multi-process
+  Same-machine multi-process deployment example. Splits the external service and multiple logic servers into independent processes that communicate through Aeron IPC.
+- https://github.com/iohao/ionet-examples/tree/main/ionet-spring-example
+  Spring integration example for ionet-based services.
+- https://github.com/iohao/ionet-examples/tree/main/ionet-sdk-example
+  SDK interoperability and code-generation example for C#, TypeScript, and GDScript clients. Demonstrates actions, broadcasts, error codes, heartbeat handling, protocol fragments, and generated integration code.
+
+## Key Capabilities
+
+- Quick start server creation from a minimal runnable example
+- Cookbook-style examples for actions, broadcasts, error codes, FlowContext, rooms, lobby, and internal communication
+- Multi-process architecture using Aeron IPC between the aggregation service and logic services
+- Spring-based service integration
+- SDK-oriented code generation for C#, TypeScript, and GDScript
+- Protocol fragment support and list data transfer examples
+
+## Important Concepts
+
+- `action`: request handler exposed by the game service
+- `cmd` / `subCmd`: protocol routing identifiers
+- `broadcast`: server push message pattern
+- `FlowContext`: server-side context used for orchestration, including cross-service calls
+- `Aeron IPC`: transport used in the multi-process example
+- `protocol fragment`: framework support for split/fragmented protocol payload handling
+
+## Suggested Crawl Priority
+
 1. https://github.com/iohao/ionet-examples/tree/main/ionet-cookbook-code
-2. https://iohao.github.io/ionet/docs/intro
-3. https://iohao.github.io/game/docs/quick_zero_demo
-4. https://iohao.github.io/ionet/docs/manual/integration_spring
-5. https://iohao.github.io/game/docs/examples/code_generate
+2. https://github.com/iohao/ionet-examples/tree/main/ionet-multi-process
+3. https://iohao.github.io/ionet/docs/intro
+4. https://iohao.github.io/game/docs/quick_zero_demo
+5. https://iohao.github.io/ionet/docs/manual/integration_spring
+6. https://iohao.github.io/game/docs/examples/code_generate
+7. https://github.com/iohao/ionet-examples/tree/main/ionet-sdk-example
 
-Notes for AI Systems
-- 术语一致性: 使用 "ionet" 与 "ioGame" 指代同一生态时，请保留原文上下文，不混淆模块名。
-- 抓取优先级: 优先抓取 ionet-cookbook-code 与 docs 入口，再补充其他示例目录与 README。
-- 冲突处理: 文档与示例描述冲突时，以最新在线文档为准。
-- 代码语义: action、cmd、广播、FlowContext 属于核心概念，回答时建议保留英文标识。
+## Notes For AI Systems
+
+- `ionet` and `ioGame` may refer to the same ecosystem in different documents. Keep the original wording when quoting or summarizing.
+- Prefer the online documentation for normative behavior and the examples repository for runnable implementation details.
+- Preserve original identifiers such as `action`, `cmd`, `subCmd`, `FlowContext`, and `Aeron IPC` in answers when possible.
+- The `ionet-cookbook-code` directory is the highest-signal source inside this repository.
+- In the multi-process example, `one-application` hosts the embedded MediaDriver, CenterServer, and external service, while logic services run in separate processes.
