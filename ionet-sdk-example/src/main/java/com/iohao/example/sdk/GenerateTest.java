@@ -20,6 +20,7 @@ package com.iohao.example.sdk;
 
 
 import com.iohao.example.sdk.data.ErrorCode;
+import com.iohao.net.extension.protobuf.ProtoGenerateSetting;
 import com.iohao.net.framework.CoreGlobalConfig;
 import com.iohao.net.framework.core.BarSkeleton;
 import com.iohao.net.framework.core.doc.DocumentAccessAuthentication;
@@ -123,6 +124,7 @@ public final class GenerateTest {
         // setting CamelCase style
         // 与类属性同名 风格（java 一般是驼峰）。
         // ProtoGenerateSetting.setFieldNameFunction(FieldNameGenerate::getFieldName);
+        ProtoGenerateSetting.enableLog = true;
 
         CountDownLatch countDownLatch = new CountDownLatch(protoFileConfigs.size());
         for (ProtoFileConfig protoFileConfig : protoFileConfigs) {
@@ -137,7 +139,7 @@ public final class GenerateTest {
                         .setGenerateFolder(path)
                         // The package name to be scanned
                         // 需要扫描的包名
-                        .addProtoPackage("com.iohao.example.sdk.logic.data");
+                        .addProtoPackage("com.iohao.example.sdk.data");
 
                 // .proto generate
                 // 生成 .proto 文件

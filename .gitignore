@@ -69,3 +69,12 @@ doc_temp.txt
 .claude
 CLAUDE.md
 AGENTS.md
+
+local/
+local/EXAMPLES_SOURCE_MAP.md
+local/FEATURE_CHAINS.md
+local/FEATURE_GAP_CHECK.md
+local/README_DOC_LINK_MAP.md
+local/communication-usage-index.md
+local/config-usage-index.md
+local/external-builder-coverage.md
