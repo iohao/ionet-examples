@@ -40,6 +40,7 @@ import java.util.List;
 @SpringBootApplication
 @SuppressWarnings("all")
 public class OneApplication {
+
     static void main(String[] args) {
         var context = SpringApplication.run(OneApplication.class, args);
         Aeron aeron = context.getBean(Aeron.class);

@@ -82,6 +82,7 @@ class EmbeddedAeronRuntime implements DisposableBean {
         log.info("Aeron Client connected.");
         return aeron;
     }
+
     @Override
     public void destroy() {
         log.info("Shutting down Aeron client and Media Driver...");

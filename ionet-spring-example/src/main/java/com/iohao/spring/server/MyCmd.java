@@ -27,5 +27,5 @@ package com.iohao.spring.server;
 public interface MyCmd {
     int cmd = 1;
 
-    int getTime = 1;
+    int getTime = 2;
 }
