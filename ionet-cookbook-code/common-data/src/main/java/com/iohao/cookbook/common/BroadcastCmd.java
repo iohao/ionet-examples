@@ -19,51 +19,51 @@ public interface BroadcastCmd {
 
     AtomicInteger inc = new AtomicInteger(10);
 
-    private static CmdInfo ofBroadcastCmd() {
+    private static CmdInfo ofBroadcast() {
         return CmdInfo.of(cmd, inc.getAndIncrement());
     }
 
     // ---------- broadcastUser ----------
-    CmdInfo broadcastUserEmpty = ofBroadcastCmd();
-    CmdInfo broadcastUserInt = ofBroadcastCmd();
-    CmdInfo broadcastUserBool = ofBroadcastCmd();
-    CmdInfo broadcastUserLong = ofBroadcastCmd();
-    CmdInfo broadcastUserString = ofBroadcastCmd();
-    CmdInfo broadcastUserObject = ofBroadcastCmd();
+    CmdInfo broadcastUserEmpty = ofBroadcast();
+    CmdInfo broadcastUserInt = ofBroadcast();
+    CmdInfo broadcastUserBool = ofBroadcast();
+    CmdInfo broadcastUserLong = ofBroadcast();
+    CmdInfo broadcastUserString = ofBroadcast();
+    CmdInfo broadcastUserObject = ofBroadcast();
     // ---------- broadcastUser List ----------
-    CmdInfo broadcastUserIntList = ofBroadcastCmd();
-    CmdInfo broadcastUserBoolList = ofBroadcastCmd();
-    CmdInfo broadcastUserLongList = ofBroadcastCmd();
-    CmdInfo broadcastUserStringList = ofBroadcastCmd();
-    CmdInfo broadcastUserObjectList = ofBroadcastCmd();
+    CmdInfo broadcastUserIntList = ofBroadcast();
+    CmdInfo broadcastUserBoolList = ofBroadcast();
+    CmdInfo broadcastUserLongList = ofBroadcast();
+    CmdInfo broadcastUserStringList = ofBroadcast();
+    CmdInfo broadcastUserObjectList = ofBroadcast();
 
     // ---------- broadcastUsers ----------
-    CmdInfo broadcastUsersEmpty = ofBroadcastCmd();
-    CmdInfo broadcastUsersInt = ofBroadcastCmd();
-    CmdInfo broadcastUsersBool = ofBroadcastCmd();
-    CmdInfo broadcastUsersLong = ofBroadcastCmd();
-    CmdInfo broadcastUsersString = ofBroadcastCmd();
-    CmdInfo broadcastUsersObject = ofBroadcastCmd();
+    CmdInfo broadcastUsersEmpty = ofBroadcast();
+    CmdInfo broadcastUsersInt = ofBroadcast();
+    CmdInfo broadcastUsersBool = ofBroadcast();
+    CmdInfo broadcastUsersLong = ofBroadcast();
+    CmdInfo broadcastUsersString = ofBroadcast();
+    CmdInfo broadcastUsersObject = ofBroadcast();
     // ---------- broadcastUsers List ----------
-    CmdInfo broadcastUsersIntList = ofBroadcastCmd();
-    CmdInfo broadcastUsersBoolList = ofBroadcastCmd();
-    CmdInfo broadcastUsersLongList = ofBroadcastCmd();
-    CmdInfo broadcastUsersStringList = ofBroadcastCmd();
-    CmdInfo broadcastUsersObjectList = ofBroadcastCmd();
+    CmdInfo broadcastUsersIntList = ofBroadcast();
+    CmdInfo broadcastUsersBoolList = ofBroadcast();
+    CmdInfo broadcastUsersLongList = ofBroadcast();
+    CmdInfo broadcastUsersStringList = ofBroadcast();
+    CmdInfo broadcastUsersObjectList = ofBroadcast();
 
     // ---------- broadcastMulticast ----------
-    CmdInfo broadcastMulticastEmpty = ofBroadcastCmd();
-    CmdInfo broadcastMulticastInt = ofBroadcastCmd();
-    CmdInfo broadcastMulticastBool = ofBroadcastCmd();
-    CmdInfo broadcastMulticastLong = ofBroadcastCmd();
-    CmdInfo broadcastMulticastString = ofBroadcastCmd();
-    CmdInfo broadcastMulticastObject = ofBroadcastCmd();
+    CmdInfo broadcastMulticastEmpty = ofBroadcast();
+    CmdInfo broadcastMulticastInt = ofBroadcast();
+    CmdInfo broadcastMulticastBool = ofBroadcast();
+    CmdInfo broadcastMulticastLong = ofBroadcast();
+    CmdInfo broadcastMulticastString = ofBroadcast();
+    CmdInfo broadcastMulticastObject = ofBroadcast();
     // ---------- broadcastMulticast List ----------
-    CmdInfo broadcastMulticastIntList = ofBroadcastCmd();
-    CmdInfo broadcastMulticastBoolList = ofBroadcastCmd();
-    CmdInfo broadcastMulticastLongList = ofBroadcastCmd();
-    CmdInfo broadcastMulticastStringList = ofBroadcastCmd();
-    CmdInfo broadcastMulticastObjectList = ofBroadcastCmd();
+    CmdInfo broadcastMulticastIntList = ofBroadcast();
+    CmdInfo broadcastMulticastBoolList = ofBroadcast();
+    CmdInfo broadcastMulticastLongList = ofBroadcast();
+    CmdInfo broadcastMulticastStringList = ofBroadcast();
+    CmdInfo broadcastMulticastObjectList = ofBroadcast();
 
 
 }

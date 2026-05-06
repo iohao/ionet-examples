@@ -15,12 +15,10 @@ import com.iohao.net.external.core.config.ExternalJoinEnum;
 import com.iohao.net.external.core.hook.internal.IdleProcessSettingBuilder;
 import com.iohao.net.external.core.net.external.OnExternalManager;
 import com.iohao.net.external.core.netty.ExternalMapper;
-import lombok.experimental.UtilityClass;
 
-@UtilityClass
 public class MyExternalServer {
 
-    public ExternalServerBuilder builder(int port, ExternalJoinEnum joinEnum) {
+    public static ExternalServerBuilder builder(int port, ExternalJoinEnum joinEnum) {
         // External server configuration
         extractedConfig();
 
@@ -40,7 +38,7 @@ public class MyExternalServer {
         return builder;
     }
 
-    private void extractedConfig() {
+    private static void extractedConfig() {
         // extension OnExternal
         OnExternalManager.register(new UserIpOnExternal());
         OnExternalManager.register(new UserOnlineCountOnExternal());
@@ -53,7 +51,7 @@ public class MyExternalServer {
         });
     }
 
-    private void extractedAccess() {
+    private static void extractedAccess() {
         var accessAuthenticationHook = ExternalGlobalConfig.accessAuthenticationHook;
         // Indicates that business methods can only be accessed after logging in
         accessAuthenticationHook.setVerifyIdentity(true);

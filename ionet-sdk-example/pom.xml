@@ -13,11 +13,11 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <ionet.version>25.4</ionet.version>
+        <ionet.version>25.5</ionet.version>
         <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
         <logback.version>1.5.19</logback.version>
         <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
-        <lombok.version>1.18.42</lombok.version>
+        <lombok.version>1.18.44</lombok.version>
         <!-- https://mvnrepository.com/artifact/net.datafaker/datafaker -->
         <datafaker.version>2.5.1</datafaker.version>
     </properties>
