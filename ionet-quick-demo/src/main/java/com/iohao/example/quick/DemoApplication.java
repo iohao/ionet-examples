@@ -45,6 +45,8 @@ public class DemoApplication {
         int port = ExternalGlobalConfig.externalPort;
         var externalServer = ExternalMapper.builder(port).build();
 
+        // Create an EmbeddedAeronRuntime instance and get the Aeron instance
+        // cn: 创建 EmbeddedAeronRuntime 实例并获取 Aeron 实例
         var aeron = new EmbeddedAeronRuntime().getAeron();
 
         new RunOne()
