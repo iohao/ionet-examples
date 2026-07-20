@@ -72,3 +72,12 @@ AGENTS.md
 
 local/
 local.zip
+
+# qoder
+QODER.md
+
+.cbmignore
+.qoder/
+
+### VS Code ###
+.vscode/

@@ -78,14 +78,14 @@ public final class GenerateTest {
          */
 
         // ----- About generating TypeScript code -----
-//        generateCodeVue();
+        generateCodeVue();
 //        generateCodeAngular();
 //        generateCodeHtml();
 //        generateCocosCreator();
 //
         // ----- About generating C# code -----
 //        generateCodeCsharpGodot();
-//        generateCodeCsharpUnity();
+        generateCodeCsharpUnity();
 
         // ----- About generating GDScript code -----
         generateCodeGDScriptGodot();
